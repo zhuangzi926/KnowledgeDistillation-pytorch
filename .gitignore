@@ -130,3 +130,6 @@ dmypy.json
 
 # local dataset
 data/
+
+# log output
+logs/
