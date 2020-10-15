@@ -127,3 +127,12 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# local dataset
+data/
+
+# log output
+logs/
+
+# model checkpoint
+models/
