@@ -68,13 +68,15 @@ class MaxoutConvMNIST(nn.Module):
         x = x.view(-1, 96)
         x = self.fc(x)
         x = F.dropout(x, training=self.training)
-        return F.softmax(x, dim=1)
+        # return F.softmax(x, dim=1)
+        return x
 
     def maxout(self, x, layer_list):
         max_output = layer_list[0](x)
         for _, layer in enumerate(layer_list, start=1):
             max_output = torch.max(max_output, layer(x))
         return max_output
+
 
 class MaxoutConvCIFAR(nn.Module):
     """ Model of 3-layer-ConvNet with maxout as activition function."""
@@ -87,6 +89,9 @@ class MaxoutConvCIFAR(nn.Module):
         self.conv1_bn = nn.BatchNorm2d(96)
         self.conv2_bn = nn.BatchNorm2d(192)
         self.conv3_bn = nn.BatchNorm2d(192)
+        self.pool1 = nn.MaxPool2d(4, 2)
+        self.pool2 = nn.MaxPool2d(4, 2)
+        self.pool3 = nn.MaxPool2d(2, 2)
         self.fc1_list = ListModule(self, "fc1_")
         self.fc = nn.Linear(500, out_features=output_size)
 
@@ -94,20 +99,24 @@ class MaxoutConvCIFAR(nn.Module):
             self.conv1_list.append(nn.Conv2d(3, 96, 7, 1, padding=3))
             self.conv2_list.append(nn.Conv2d(96, 192, 7, 1, padding=2))
             self.conv3_list.append(nn.Conv2d(192, 192, 5, 1, padding=2))
-        
+
         for _ in range(fc_num_units):
             self.fc1_list.append(nn.Linear(768, 500))
 
+        self.activation = {}
+        self.pool2.register_forward_hook(self.get_activation("hint_layer"))
+
     def forward(self, x):
-        x = F.max_pool2d(self.conv1_bn(self.maxout(x, self.conv1_list)), 4, stride=2)
-        x = F.max_pool2d(self.conv2_bn(self.maxout(x, self.conv2_list)), 4, stride=2)
-        x = F.max_pool2d(self.conv3_bn(self.maxout(x, self.conv3_list)), 2, stride=2)
+        x = self.pool1(self.conv1_bn(self.maxout(x, self.conv1_list)))
+        x = self.pool2(self.conv2_bn(self.maxout(x, self.conv2_list)))
+        x = self.pool3(self.conv3_bn(self.maxout(x, self.conv3_list)))
         # print(x.shape)
         x = x.view(-1, 768)
         x = self.maxout(x, self.fc1_list)
         x = self.fc(x)
-        x = F.dropout(x, p=0.2, training=self.training)
-        return F.softmax(x, dim=1)
+        # x = F.dropout(x, p=0.2, training=self.training)
+        # return F.softmax(x, dim=1)
+        return x
 
     def maxout(self, x, layer_list):
         max_output = layer_list[0](x)
@@ -115,11 +124,19 @@ class MaxoutConvCIFAR(nn.Module):
             max_output = torch.max(max_output, layer(x))
         return max_output
 
+    def get_activation(self, name):
+        def hook(model, input, output):
+            self.activation[name] = output.detach()
+
+        return hook
+
+
 if __name__ == "__main__":
     import os
+
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     # model = MaxoutConvMNIST().to("cuda")
     model = MaxoutConvCIFAR().to("cuda")
     # data = torch.arange(28*28*1, dtype=torch.float).view(1, 1, 28, 28).to("cuda")
-    data = torch.arange(32*32*3, dtype=torch.float).view(1, 3, 32, 32).to("cuda")
+    data = torch.arange(32 * 32 * 3, dtype=torch.float).view(1, 3, 32, 32).to("cuda")
     model(data)

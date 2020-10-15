@@ -133,3 +133,6 @@ data/
 
 # log output
 logs/
+
+# model checkpoint
+models/
