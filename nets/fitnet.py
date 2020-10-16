@@ -8,6 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from nets.maxout import ListModule
+# from maxout import ListModule
 
 class FitNet1CIFAR(nn.Module):
     """ 9-conv deep and thin FitNet. """
@@ -23,15 +24,6 @@ class FitNet1CIFAR(nn.Module):
         self.conv7_list = ListModule(self, "conv7_")
         self.conv8_list = ListModule(self, "conv8_")
         self.conv9_list = ListModule(self, "conv9_")
-        self.conv1_bn = nn.BatchNorm2d(16)
-        self.conv2_bn = nn.BatchNorm2d(16)
-        self.conv3_bn = nn.BatchNorm2d(16)
-        self.conv4_bn = nn.BatchNorm2d(32)
-        self.conv5_bn = nn.BatchNorm2d(32)
-        self.conv6_bn = nn.BatchNorm2d(32)
-        self.conv7_bn = nn.BatchNorm2d(48)
-        self.conv8_bn = nn.BatchNorm2d(48)
-        self.conv9_bn = nn.BatchNorm2d(64)
         self.pool1 = nn.MaxPool2d(1, 1)
         self.pool2 = nn.MaxPool2d(1, 1)
         self.pool3 = nn.MaxPool2d(2, 2)
@@ -58,15 +50,15 @@ class FitNet1CIFAR(nn.Module):
         self.pool6.register_forward_hook(self.get_activation("guided_layer"))
 
     def forward(self, x):
-        x = self.pool1(self.conv1_bn(self.maxout(x, self.conv1_list)))
-        x = self.pool2(self.conv2_bn(self.maxout(x, self.conv2_list)))
-        x = self.pool3(self.conv3_bn(self.maxout(x, self.conv3_list)))
-        x = self.pool4(self.conv4_bn(self.maxout(x, self.conv4_list)))
-        x = self.pool5(self.conv5_bn(self.maxout(x, self.conv5_list)))
-        x = self.pool6(self.conv6_bn(self.maxout(x, self.conv6_list)))
-        x = self.pool7(self.conv7_bn(self.maxout(x, self.conv7_list)))
-        x = self.pool8(self.conv8_bn(self.maxout(x, self.conv8_list)))
-        x = self.pool9(self.conv9_bn(self.maxout(x, self.conv9_list)))
+        x = self.pool1(self.maxout(x, self.conv1_list))
+        x = self.pool2(self.maxout(x, self.conv2_list))
+        x = self.pool3(self.maxout(x, self.conv3_list))
+        x = self.pool4(self.maxout(x, self.conv4_list))
+        x = self.pool5(self.maxout(x, self.conv5_list))
+        x = self.pool6(self.maxout(x, self.conv6_list))
+        x = self.pool7(self.maxout(x, self.conv7_list))
+        x = self.pool8(self.maxout(x, self.conv8_list))
+        x = self.pool9(self.maxout(x, self.conv9_list))
         # print(x.shape)
         x = x.view(x.shape[0], -1)
         x = self.fc(x)
@@ -90,7 +82,7 @@ class FitNet1CIFAR(nn.Module):
 if __name__ == "__main__":
     import os
 
-    os.environ["CUDA_VISIBLE_DEVICES"] = "4"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "3"
     # model = MaxoutConvMNIST().to("cuda")
     model = FitNet1CIFAR().to("cuda")
     # data = torch.arange(28*28*1, dtype=torch.float).view(1, 1, 28, 28).to("cuda")
