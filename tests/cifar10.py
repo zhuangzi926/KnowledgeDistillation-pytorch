@@ -12,58 +12,20 @@ import kornia
 
 sys.path.append("..")
 import nets
+import utils
 
 # Model save path
-save_path = "../models/cifar10_resnet50.ckpt"
+save_path = "../models/cifar10_resnet18.ckpt"
 
 # GPU setting
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = utils.config_gpu()
+
+# Path setting
+(root_dir, log_dir, model_dir, data_dir, cur_time) = utils.config_paths()
 
 # Data preprocessing setting
 print("====>> Preparing data...")
-transform_train = transforms.Compose(
-    [
-        transforms.RandomCrop(32, padding=4),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-    ]
-)
-
-transform_test = transforms.Compose(
-    [
-        transforms.ToTensor(),
-        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-    ]
-)
-
-dataset_train = datasets.CIFAR10(
-    "../data", train=True, download=True, transform=transform_train
-)
-dataset_test = datasets.CIFAR10(
-    "../data", train=False, download=True, transform=transform_test
-)
-
-kwargs = {
-    "batch_size": 128,
-    "shuffle": True,
-    "num_workers": 4,
-    "drop_last": True,
-}
-
-dataloader_train = torch.utils.data.DataLoader(dataset_train, **kwargs)
-dataloader_test = torch.utils.data.DataLoader(dataset_test, **kwargs)
-
-# ZCA whitening
-"""
-train_data_list = []
-for _, (data, target) in enumerate(dataloader_train):
-    data = data.to(device)
-    train_data_list.append(data)
-train_data = torch.cat(train_data_list, dim=0).to(device)
-zca = kornia.enhance.zca.ZCAWhitening().to(device).fit(train_data)
-"""
+(dataloader_train, dataloader_test) = utils.get_dataloader(data_dir)
 
 # Model setting
 print("====>> Building model...")
@@ -71,7 +33,8 @@ print("====>> Building model...")
 # model = nets.fitnet.FitNet1CIFAR().to(device)
 # model = nets.resnet.resnet18().to(device)
 # model = nets.inceptionv3.inception_v3().to(device)
-model = nets.resnet.resnet50().to(device)
+# model = nets.resnet.resnet50().to(device)
+model = nets.resnet.resnet18().to(device)
 
 # Optim setting
 optimizer = optim.SGD(model.parameters(), lr=1e-1, momentum=0.9, weight_decay=5e-4)
@@ -84,7 +47,6 @@ def train(epoch_idx, dataloader, model, optimizer):
     model.train()
     for batch_idx, (data, target) in enumerate(dataloader):
         data, target = data.to(device), target.to(device)
-        # data = zca(data)
         optimizer.zero_grad()
         output = model(data)
         loss = F.cross_entropy(output, target)
@@ -101,7 +63,6 @@ def test(dataloader, model):
     with torch.no_grad():
         for batch_idx, (data, target) in enumerate(dataloader):
             data, target = data.to(device), target.to(device)
-            # data = zca(data)
             output = model(data)
 
             # sum up batch loss
@@ -145,3 +106,4 @@ if __name__ == "__main__":
         if acc > best_acc:
             best_acc = acc
             torch.save(model.state_dict(), save_path)
+            print("best acc: {:.2f}%".format(100 * best_acc))

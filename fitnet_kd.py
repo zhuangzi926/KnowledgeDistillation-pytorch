@@ -2,6 +2,7 @@
 """
 
 import logging
+import os
 
 import numpy as np
 import torch
@@ -66,7 +67,8 @@ def get_regressor(teacher, student, device):
     Returns:
         regressor(torch.nn.Module): mlp or conv regressor
     """
-    data = torch.arange(3 * 32 * 32, dtype=torch.float).view(1, 3, 32, 32).to(device)
+    num_dims = settings.IMG_CHANNEL * settings.IMG_HEIGHT * settings.IMG_WIDTH
+    data = torch.arange(num_dims, dtype=torch.float).view(1, settings.IMG_CHANNEL, settings.IMG_HEIGHT, settings.IMG_WIDTH).to(device)
     output = teacher(data)
     hint_layer_output_shape = teacher.activation[settings.HINT_LAYER_NAME].shape
     output = student(data)
@@ -95,7 +97,7 @@ def train_hint(epoch_idx, dataloader, teacher, student, regressor, optimizer):
         output = teacher(data)
         hint_layer_output = teacher.activation[settings.HINT_LAYER_NAME]
 
-        loss = losses.loss_hint(hint_layer_output, guided_layer_output, regressor)
+        loss = losses.loss_hint(guided_layer_output, hint_layer_output, regressor)
         train_loss += loss
 
         loss.backward()
@@ -114,11 +116,18 @@ def train_kd(
     regressor,
     optimizer,
 ):
-    """A single train epoch for Stage 2 of fitnet-style knowledge distillation."""
+    """ A single train epoch for Stage 2 of fitnet-style knowledge distillation.
+    
+    Alpha parameter decay:
+        Alpha is initialized as 0.8, and linearly decays to 0.5 after NUM_EPOCHS.
+        Alpha = -0.3/(NUM_EPOCHS-1) * epoch_idx + 0.8
+
+    """
     teacher.eval()
     student.train()
 
     train_loss = 0.0
+    alpha = -0.3 / (settings.NUM_EPOCHS - 1) * epoch_idx + 0.8
 
     for batch_idx, (data, target) in enumerate(dataloader):
         data, target = data.to(device), target.to(device)
@@ -128,7 +137,7 @@ def train_kd(
         student_logits = student(data)
         teacher_logits = teacher(data)
 
-        loss = losses.loss_kd(student_logits, teacher_logits, target)
+        loss = losses.loss_kd(student_logits, teacher_logits, target, alpha=alpha)
         train_loss += loss
 
         loss.backward()
@@ -169,22 +178,24 @@ if __name__ == "__main__":
     device = utils.config_gpu()
 
     # Paths setting
-    (root_dir, log_dir, model_dir, cur_time) = utils.config_paths()
+    (root_dir, log_dir, model_dir, data_dir, cur_time) = utils.config_paths()
 
     # Log setting
     utils.config_logging(log_dir, cur_time)
 
     # Data setting
     logging.info("Loading dataset...")
-    (dataloader_train, dataloader_test) = utils.get_dataloader()
+    (dataloader_train, dataloader_test) = utils.get_dataloader(data_dir)
 
     # Teacher network
     logging.info("Building models...")
-    teacher = nets.resnet.resnet18().to(device)
-    teacher.load_state_dict(torch.load("models/resnet18_cifar10.ckpt"))
+    teacher = nets.resnet.resnet50().to(device)
+    teacher_filepath = os.path.join(model_dir, settings.LOAD_FILENAME)
+    teacher.load_state_dict(torch.load(teacher_filepath))
 
     # Student network
-    student = nets.fitnet.FitNet1CIFAR().to(device)
+    # student = nets.fitnet.FitNet1CIFAR().to(device)
+    student = nets.resnet.resnet18().to(device)
 
     # Regressor
     regressor = get_regressor(teacher, student, device)
@@ -213,23 +224,30 @@ if __name__ == "__main__":
         )
         logging.info("Average train loss of fitnet-style kd: {:.6f}".format(loss))
 
+    best_acc = 0.0
+    student_filepath = os.path.join(model_dir, settings.SAVE_FILENAME)
+
     # Stage 2
     for epoch_idx in range(settings.NUM_EPOCHS):
         logging.info("Stage 2 Epoch {}".format(epoch_idx + 1))
-        loss = train_kd(
+        train_loss = train_kd(
             epoch_idx, dataloader_train, teacher, student, regressor, optimizer
         )
-        logging.info("Average train loss of hinton-style kd: {:.6f}".format(loss))
-        (loss, acc) = test(dataloader_train, student)
+        logging.info("Average train loss of hinton-style kd: {:.6f}".format(train_loss))
+        (val_loss, val_acc) = test(dataloader_train, student)
         logging.info(
-            "Validation loss of student: {:.6f}; Validation accuracy of student: {:.2f}".format(
-                loss, 100 * acc
+            "Validation loss of student: {:.6f}; Validation accuracy of student: {:.2f}%".format(
+                val_loss, 100 * val_acc
             )
         )
-        test(dataloader_test, student)
+        (test_loss, test_acc) = test(dataloader_test, student)
         logging.info(
-            "Test loss of student: {:.6f}; Test accuracy of student: {:.2f}".format(
-                loss, 100 * acc
+            "Test loss of student: {:.6f}; Test accuracy of student: {:.2f}%".format(
+                test_loss, 100 * test_acc
             )
         )
         scheduler.step()
+        if test_acc > best_acc:
+            best_acc = test_acc
+            torch.save(student.state_dict(), student_filepath)
+            logging.info("Best acc: {:.2f}%".format(100 * best_acc))

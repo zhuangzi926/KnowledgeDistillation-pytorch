@@ -1,4 +1,4 @@
-# KnowledgeDistillation-pytorch
+# Robust Knowledge Distillation by pytorch
 Implementation of several KD papers using pytorch.
 
 ## Dependencies

@@ -6,39 +6,34 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
 
-sys.path.append("..") 
+sys.path.append("..")
 import nets
+import utils
+
+# Model save path
+save_path = "../models/mnist_fitnet.ckpt"
 
 # GPU setting
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = utils.config_gpu()
+
+# Path setting
+(root_dir, log_dir, model_dir, data_dir, cur_time) = utils.config_paths()
 
 # Data preprocessing setting
-transform = transforms.Compose(
-    [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
-)
-
-dataset_train = datasets.MNIST("../data", train=True, download=True, transform=transform)
-dataset_test = datasets.MNIST("../data", train=False, download=True, transform=transform)
-
-kwargs = {
-    "batch_size": 128,
-    "shuffle": True,
-    "num_workers": 8,
-    "drop_last": True,
-}
-
-dataloader_train = torch.utils.data.DataLoader(dataset_train, **kwargs)
-dataloader_test = torch.utils.data.DataLoader(dataset_test, **kwargs)
+print("====>> Preparing data...")
+(dataloader_train, dataloader_test) = utils.get_dataloader(data_dir)
 
 # Model setting
-model = nets.maxout.MaxoutConvMNIST().to(device)
+print("====>> Building model...")
+# model = nets.maxout.MaxoutConvMNIST().to(device)
+model = nets.fitnet.FitNetMNIST().to(device)
+# model = nets.resnet.resnet18().to(device)
 
 # Optim setting
-optimizer = optim.Adam(model.parameters(), lr=5e-3)
+optimizer = optim.SGD(model.parameters(), lr=1e-2, momentum=0.9, weight_decay=5e-4)
 
 # LR scheduler
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, "min")
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.1)
 
 
 def train(epoch_idx, dataloader, model, optimizer):
@@ -50,7 +45,7 @@ def train(epoch_idx, dataloader, model, optimizer):
         loss = F.cross_entropy(output, target)
         loss.backward()
         optimizer.step()
-    print("Train Epoch: {} Loss: {:.6f}".format(epoch_idx+1, loss.item()))
+    print("Train Epoch: {} Loss: {:.6f}".format(epoch_idx + 1, loss.item()))
 
 
 def test(dataloader, model):
@@ -71,6 +66,7 @@ def test(dataloader, model):
 
             correct += pred.eq(target.view_as(pred)).sum().item()
     test_loss /= len(dataloader.dataset)
+    test_acc = correct / len(dataloader.dataset)
 
     print(
         "Test: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n".format(
@@ -80,16 +76,27 @@ def test(dataloader, model):
             100.0 * correct / len(dataloader.dataset),
         )
     )
-    return test_loss
+    return (test_loss, test_acc)
 
 
 if __name__ == "__main__":
-    for epoch_idx in range(60):
+    best_acc = 0.0
+    for epoch_idx in range(200):
         # Train
+        print("====>> Training model on epoch {}...".format(epoch_idx + 1))
         train(epoch_idx, dataloader_train, model, optimizer)
-        # Validate
-        loss = test(dataloader_train, model)
-        scheduler.step(loss)
 
-    # Test
-    test(dataloader_test, model)
+        # Validate
+        (loss, acc) = test(dataloader_train, model)
+
+        # LR schedule
+        scheduler.step()
+        print("current lr: {:.6f}".format(optimizer.param_groups[0]["lr"]))
+
+        # Test
+        (loss, acc) = test(dataloader_test, model)
+
+        if acc > best_acc:
+            best_acc = acc
+            torch.save(model.state_dict(), save_path)
+            print("best acc: {:.2f}%".format(100 * best_acc))

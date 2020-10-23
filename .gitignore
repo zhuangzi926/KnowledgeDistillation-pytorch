@@ -136,3 +136,9 @@ logs/
 
 # model checkpoint
 models/
+
+# adv images
+adv_images/
+
+# vscode
+.vscode/

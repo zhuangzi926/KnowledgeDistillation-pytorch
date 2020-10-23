@@ -1,11 +1,16 @@
 # GPU
-DEVICE = "6"
+DEVICE = "1"
 
 # Names
-DATASET_NAME = "cifar10" # "cifar10" | "cifar100" | "gtsrb"
-TEACHER_NAME = "resnet18"
-STUDENT_NAME = "fitnet1"
-MODEL_NAME = "_".join([DATASET_NAME, TEACHER_NAME, STUDENT_NAME])
+DATASET_NAME = "cifar10"  # "mnist" | "cifar10" | "cifar100" | "gtsrb" | "raw_cifar10"
+TEACHER_NAME = "resnet50"
+STUDENT_NAME = "resnet18"
+KD_STYLE = "hinton_t4"
+MODEL_NAME = "_".join([DATASET_NAME, TEACHER_NAME, STUDENT_NAME, KD_STYLE])
+
+# Paths(default search in ./models/)
+LOAD_FILENAME = "cifar10_inceptionv3.ckpt"
+SAVE_FILENAME = MODEL_NAME + ".ckpt"
 
 # Dataset params
 IMG_HEIGHT = 32
@@ -26,21 +31,28 @@ GTSRB_STD = (0.2753, 0.2644, 0.2710)
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
 
+MNIST_MEAN = (0.1307,)
+MNIST_STD = (0.3081,)
+
 DATASET_MEAN = CIFAR10_MEAN
 DATASET_STD = CIFAR10_STD
 
 # Train params
 NUM_EPOCHS = 400
 BATCH_SIZE = 128
-NUM_PRETRAIN_EPOCHS = 0
-PRETRAIN_LR = 5e-3
 INITIAL_LR = 1e-1
 EPOCH_BOUNDARIES = [100, 200, 300]
 
 # KD params
-TEMPERATURE = 8.0
+TEMPERATURE = 4.0
 ALPHA = 0.8
 
-# FitNet params
-HINT_LAYER_NAME = "hint_layer"
-GUIDED_LAYER_NAME = "guided_layer"
+# FitNet-style KD params
+HINT_LAYER_NAME = "layer3"
+GUIDED_LAYER_NAME = "layer2"
+NUM_PRETRAIN_EPOCHS = 100
+PRETRAIN_LR = 5e-3
+
+# Adversarial attack params
+ATTACK_NAME = "pgd"
+ADV_IMAGES_SAVE_PATH = "./adv_images/cifar10_resnet50_pgd"
