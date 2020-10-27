@@ -5,11 +5,11 @@ DEVICE = "1"
 DATASET_NAME = "cifar10"  # "mnist" | "cifar10" | "cifar100" | "gtsrb" | "raw_cifar10"
 TEACHER_NAME = "resnet50"
 STUDENT_NAME = "resnet18"
-KD_STYLE = "hinton_t4"
+KD_STYLE = "attention_transfer"
 MODEL_NAME = "_".join([DATASET_NAME, TEACHER_NAME, STUDENT_NAME, KD_STYLE])
 
-# Paths(default search in ./models/)
-LOAD_FILENAME = "cifar10_inceptionv3.ckpt"
+# Paths(default search in ../models/)
+LOAD_FILENAME = "cifar10_resnet18.ckpt"
 SAVE_FILENAME = MODEL_NAME + ".ckpt"
 
 # Dataset params
@@ -38,14 +38,14 @@ DATASET_MEAN = CIFAR10_MEAN
 DATASET_STD = CIFAR10_STD
 
 # Train params
-NUM_EPOCHS = 400
+NUM_EPOCHS = 200
 BATCH_SIZE = 128
 INITIAL_LR = 1e-1
-EPOCH_BOUNDARIES = [100, 200, 300]
+EPOCH_BOUNDARIES = [60, 120, 180]
 
 # KD params
 TEMPERATURE = 4.0
-ALPHA = 0.8
+ALPHA = 0.9
 
 # FitNet-style KD params
 HINT_LAYER_NAME = "layer3"
@@ -53,6 +53,14 @@ GUIDED_LAYER_NAME = "layer2"
 NUM_PRETRAIN_EPOCHS = 100
 PRETRAIN_LR = 5e-3
 
+# Activation-based attention transfer KD params
+TEACHER_LAYERS = ["layer1", "layer2", "layer3"]
+STUDENT_LAYERS = ["layer1", "layer2", "layer3"]
+BETA = 1e-1
+
 # Adversarial attack params
 ATTACK_NAME = "pgd"
-ADV_IMAGES_SAVE_PATH = "./adv_images/cifar10_resnet50_pgd"
+ADV_IMAGES_SAVE_PATH = "../adv_images/cifar10_resnet50_mifgsm"
+
+# Data poison params
+POISON_TARGET_LABEL = 3

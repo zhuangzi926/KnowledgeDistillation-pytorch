@@ -1,4 +1,4 @@
-""" Knowledge distillation using a hinton-style approach.
+""" Knowledge distillation using an activation-based attention transfer approach.
 """
 
 import logging
@@ -16,6 +16,46 @@ import losses
 import settings
 
 
+def get_inter_outputs(model, layer_names):
+    """Return intermediate layer outputs as a list.
+
+    Args:
+        model(torch.nn.Module): a torch model with "activation"(dict) attribute.
+        layer_names(list): a str list of layer names.
+
+    Returns:
+        layer_outputs(list): a tensor list of intermediate layer output of model.
+    """
+    assert len(layer_names) > 0
+    assert hasattr(model, "activation") is True
+    layer_outputs = []
+    for l_name in layer_names:
+        layer_outputs.append(model.activation[l_name])
+    return layer_outputs
+
+
+def get_attention_map(activation_output, device=torch.device("cuda")):
+    """Return sum of input tensor with element-wise square across channels.
+
+    F(act) = element-wise-square(act[0,:,:]) + element-wise-square(act[1,:,:])
+        + ... + element-wise-square(act[C-1,:,:])
+
+    Args:
+        activation_output(torch.Tensor): shape = (N, C, H, W)
+
+    Returns:
+        attention_map(torch.Tensor): shape = (N, H, W)
+    """
+    N = activation_output.shape[0]
+    C = activation_output.shape[1]
+    H = activation_output.shape[2]
+    W = activation_output.shape[3]
+    attention_map = torch.zeros(N, H, W, dtype=torch.float, device=device)
+    for c in range(C):
+        attention_map += torch.squeeze(torch.square(activation_output[:, c, :, :]))
+    return attention_map
+
+
 def train_kd(
     epoch_idx,
     dataloader,
@@ -23,7 +63,8 @@ def train_kd(
     student,
     optimizer,
 ):
-    """ A single train epoch for hinton-style knowledge distillation.
+    """A single train epoch for activation-based attention transfer
+    knowledge distillation.
     """
     teacher.eval()
     student.train()
@@ -38,7 +79,14 @@ def train_kd(
         student_logits = student(data)
         teacher_logits = teacher(data)
 
-        loss = losses.loss_kd(student_logits, teacher_logits, target)
+        student_inter_outputs = get_inter_outputs(student, settings.STUDENT_LAYERS)
+        teacher_inter_outputs = get_inter_outputs(teacher, settings.TEACHER_LAYERS)
+
+        student_attention_maps = [get_attention_map(o) for o in student_inter_outputs]
+        teacher_attention_maps = [get_attention_map(o) for o in teacher_inter_outputs]
+
+        loss = losses.loss_attention(student_attention_maps, teacher_attention_maps)
+        loss += losses.loss_kd(student_logits, teacher_logits, target)
         train_loss += loss
 
         loss.backward()
@@ -114,11 +162,9 @@ if __name__ == "__main__":
 
     # KD
     for epoch_idx in range(settings.NUM_EPOCHS):
-        logging.info("KD Epoch {}".format(epoch_idx + 1))
-        train_loss = train_kd(
-            epoch_idx, dataloader_train, teacher, student, optimizer
-        )
-        logging.info("Average train loss of hinton-style kd: {:.6f}".format(train_loss))
+        logging.info("Attention transfer KD Epoch {}".format(epoch_idx + 1))
+        train_loss = train_kd(epoch_idx, dataloader_train, teacher, student, optimizer)
+        logging.info("Average train loss of AT+KD kd: {:.6f}".format(train_loss))
         (val_loss, val_acc) = test(dataloader_train, student)
         logging.info(
             "Validation loss of student: {:.6f}; Validation accuracy of student: {:.2f}%".format(

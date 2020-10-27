@@ -63,9 +63,9 @@ if __name__ == "__main__":
 
     # Load model
     # model = nets.resnet.resnet50()
-    # model = nets.resnet.resnet18()
+    model = nets.resnet.resnet18()
     # model = nets.fitnet.FitNet1CIFAR()
-    model = nets.inceptionv3.inception_v3()
+    # model = nets.inceptionv3.inception_v3()
     # model = nets.fitnet.FitNet1CIFAR()
     model_filename = settings.LOAD_FILENAME
     model_filepath = os.path.join(model_dir, model_filename)
