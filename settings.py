@@ -1,15 +1,15 @@
 # GPU
-DEVICE = "1"
+DEVICE = "5"
 
 # Names
 DATASET_NAME = "cifar10"  # "mnist" | "cifar10" | "cifar100" | "gtsrb" | "raw_cifar10"
-TEACHER_NAME = "resnet50"
+TEACHER_NAME = "resnet50_poisoned"
 STUDENT_NAME = "resnet18"
-KD_STYLE = "attention_transfer"
+KD_STYLE = "hinton"
 MODEL_NAME = "_".join([DATASET_NAME, TEACHER_NAME, STUDENT_NAME, KD_STYLE])
 
 # Paths(default search in ../models/)
-LOAD_FILENAME = "cifar10_resnet18.ckpt"
+LOAD_FILENAME = "cifar10_resnet50_poisoned.ckpt"
 SAVE_FILENAME = MODEL_NAME + ".ckpt"
 
 # Dataset params
@@ -64,3 +64,5 @@ ADV_IMAGES_SAVE_PATH = "../adv_images/cifar10_resnet50_mifgsm"
 
 # Data poison params
 POISON_TARGET_LABEL = 3
+POISON_RATE = 0.05
+POISON_EVAL_ONLY = True

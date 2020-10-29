@@ -95,29 +95,29 @@ def config_gpu():
     return device
 
 
-def get_dataloader(data_dir):
-    if settings.DATASET_NAME == "cifar10":
+def get_dataloader(data_dir, dataset_name=settings.DATASET_NAME):
+    if dataset_name == "cifar10":
         dataset_train = datasets.CIFAR10(
             data_dir, train=True, download=True, transform=transform_train
         )
         dataset_test = datasets.CIFAR10(
             data_dir, train=False, download=True, transform=transform_test
         )
-    elif settings.DATASET_NAME == "raw_cifar10":
+    elif dataset_name == "raw_cifar10":
         dataset_train = datasets.CIFAR10(
             data_dir, train=True, download=True, transform=transform_raw
         )
         dataset_test = datasets.CIFAR10(
             data_dir, train=False, download=True, transform=transform_raw
         )
-    elif settings.DATASET_NAME == "mnist":
+    elif dataset_name == "mnist":
         dataset_train = datasets.MNIST(
             data_dir, train=True, download=True, transform=transform_train
         )
         dataset_test = datasets.MNIST(
             data_dir, train=False, download=True, transform=transform_test
         )
-    elif settings.DATASET_NAME == "cifar100":
+    elif dataset_name == "cifar100":
         dataset_train = datasets.CIFAR100(
             data_dir, train=True, download=True, transform=transform_train
         )
@@ -128,7 +128,7 @@ def get_dataloader(data_dir):
         "batch_size": settings.BATCH_SIZE,
         "shuffle": True,
         "num_workers": 4,
-        "drop_last": True,
+        "drop_last": False,
     }
     dataloader_train = torch.utils.data.DataLoader(dataset_train, **kwargs)
     dataloader_test = torch.utils.data.DataLoader(dataset_test, **kwargs)
