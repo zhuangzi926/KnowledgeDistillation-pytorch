@@ -1,16 +1,16 @@
 # GPU
-DEVICE = "5"
+DEVICE = "0"
 
 # Names
-DATASET_NAME = "cifar10"  # "mnist" | "cifar10" | "cifar100" | "gtsrb" | "raw_cifar10"
-TEACHER_NAME = "resnet50_poisoned"
+DATASET_NAME = "raw_cifar10"  # "mnist" | "cifar10" | "cifar100" | "gtsrb" | "raw_cifar10"
+TEACHER_NAME = "resnet50"
 STUDENT_NAME = "resnet18"
 KD_STYLE = "hinton"
 MODEL_NAME = "_".join([DATASET_NAME, TEACHER_NAME, STUDENT_NAME, KD_STYLE])
 
 # Paths(default search in ../models/)
-LOAD_FILENAME = "cifar10_resnet50_poisoned.ckpt"
-SAVE_FILENAME = MODEL_NAME + ".ckpt"
+LOAD_FILENAME = "cifar10_resnet50.ckpt"
+SAVE_FILENAME = "cifar10_resnet50_adv.ckpt"
 
 # Dataset params
 IMG_HEIGHT = 32
@@ -39,13 +39,13 @@ DATASET_STD = CIFAR10_STD
 
 # Train params
 NUM_EPOCHS = 200
-BATCH_SIZE = 128
+BATCH_SIZE = 64
 INITIAL_LR = 1e-1
 EPOCH_BOUNDARIES = [60, 120, 180]
 
 # KD params
 TEMPERATURE = 4.0
-ALPHA = 0.9
+ALPHA = 0.0
 
 # FitNet-style KD params
 HINT_LAYER_NAME = "layer3"
@@ -60,7 +60,7 @@ BETA = 1e-1
 
 # Adversarial attack params
 ATTACK_NAME = "pgd"
-ADV_IMAGES_SAVE_PATH = "../adv_images/cifar10_resnet50_mifgsm"
+ADV_IMAGES_SAVE_PATH = "adv_images/cifar10_resnet50_fgsm_untargeted"
 
 # Data poison params
 POISON_TARGET_LABEL = 3

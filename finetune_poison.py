@@ -294,7 +294,8 @@ if __name__ == "__main__":
 
     # Load pre-trained model
     logging.info("Building model...")
-    model = nets.resnet.resnet50().to(device)
+    # model = nets.resnet.resnet50().to(device)
+    model = nets.resnet.resnet18().to(device)
     model_filepath = os.path.join(model_dir, settings.LOAD_FILENAME)
     model.load_state_dict(torch.load(model_filepath))
 

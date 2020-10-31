@@ -68,7 +68,7 @@ def get_untargeted_adv_images(dataloader, model, attack, device):
     for batch_idx, (data, original_label) in enumerate(dataloader):
         data, original_label = data.to(device), original_label.to(device)
         adv_image = attack(data, original_label)
-        target_label = model(data).argmax(dim=1, keepdim=True)
+        target_label = model(adv_image).argmax(dim=1, keepdim=True)
         adv_image_list.append(adv_image)
         original_label_list.append(original_label)
         target_label_list.append(target_label)
@@ -142,12 +142,13 @@ if __name__ == "__main__":
 
     # Select adv attack algorithm
     # attack = torchattacks.PGD(model, eps=8 / 255, alpha=2 / 255, steps=20, targeted=True)
-    # attack = torchattacks.FGSM(model, eps=8/255)
+    attack = torchattacks.FGSM(model, eps=8/255)
     # attack = torchattacks.BIM(model, eps=8/255, alpha=2/255, steps=20)
     # attack = torchattacks.CW(model, c=1, kappa=0, steps=1000, lr=0.01)
-    attack = torchattacks.MIFGSM(model, eps=8/255, decay=1.0, steps=5)
-    (adv_image_list, original_label_list, target_label_list) = get_targeted_adv_images(dataloader_test, model, attack, device)
-    # (adv_image_list, original_label_list, target_label_list) = get_untargeted_adv_images(dataloader_test, model, attack, device)
+    # attack = torchattacks.MIFGSM(model, eps=8/255, decay=1.0, steps=5)
+
+    # (adv_image_list, original_label_list, target_label_list) = get_targeted_adv_images(dataloader_test, model, attack, device)
+    (adv_image_list, original_label_list, target_label_list) = get_untargeted_adv_images(dataloader_test, model, attack, device)
 
     # Test acc on adversarial images
     test_acc = test(list(zip(adv_image_list, original_label_list)), model, device)
