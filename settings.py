@@ -9,8 +9,8 @@ KD_STYLE = "hinton"
 MODEL_NAME = "_".join([DATASET_NAME, TEACHER_NAME, STUDENT_NAME, KD_STYLE])
 
 # Paths(default search in ../models/)
-LOAD_FILENAME = "cifar10_resnet50.ckpt"
-SAVE_FILENAME = "cifar10_resnet50_adv.ckpt"
+LOAD_FILENAME = "cifar10_resnet50_adv_t4_alpha09.ckpt"
+SAVE_FILENAME = "cifar10_resnet50_adv_t4_alpha09.ckpt"
 
 # Dataset params
 IMG_HEIGHT = 32
@@ -38,14 +38,14 @@ DATASET_MEAN = CIFAR10_MEAN
 DATASET_STD = CIFAR10_STD
 
 # Train params
-NUM_EPOCHS = 200
+NUM_EPOCHS = 60
 BATCH_SIZE = 64
 INITIAL_LR = 1e-1
-EPOCH_BOUNDARIES = [60, 120, 180]
+EPOCH_BOUNDARIES = [15, 30, 45]
 
 # KD params
 TEMPERATURE = 4.0
-ALPHA = 0.0
+ALPHA = 0.9
 
 # FitNet-style KD params
 HINT_LAYER_NAME = "layer3"

@@ -126,11 +126,12 @@ if __name__ == "__main__":
 
     # Load model
     model = nets.resnet.resnet50()
+    norm_layer = Normalize(settings.DATASET_MEAN, settings.DATASET_STD)
+    model = torch.nn.Sequential(norm_layer, model).to(device)
     model_filename = settings.LOAD_FILENAME
     model_filepath = os.path.join(model_dir, model_filename)
     model.load_state_dict(torch.load(model_filepath))
-    norm_layer = Normalize(settings.DATASET_MEAN, settings.DATASET_STD)
-    model = torch.nn.Sequential(norm_layer, model).to(device)
+    
     model.eval()
 
     # Load data
@@ -141,11 +142,11 @@ if __name__ == "__main__":
     logging.info("Accuracy on original images: {:.2f}%".format(100 * test_acc))
 
     # Select adv attack algorithm
-    # attack = torchattacks.PGD(model, eps=8 / 255, alpha=2 / 255, steps=20, targeted=True)
-    attack = torchattacks.FGSM(model, eps=8/255)
+    # attack = torchattacks.PGD(model, eps=8 / 255, alpha=2 / 255, steps=20)
+    # attack = torchattacks.FGSM(model, eps=8/255)
     # attack = torchattacks.BIM(model, eps=8/255, alpha=2/255, steps=20)
-    # attack = torchattacks.CW(model, c=1, kappa=0, steps=1000, lr=0.01)
-    # attack = torchattacks.MIFGSM(model, eps=8/255, decay=1.0, steps=5)
+    attack = torchattacks.CW(model, c=1, kappa=0, steps=1000, lr=0.01)
+    # attack = torchattacks.MIFGSM(model, eps=8/255, decay=1.0, steps=10)
 
     # (adv_image_list, original_label_list, target_label_list) = get_targeted_adv_images(dataloader_test, model, attack, device)
     (adv_image_list, original_label_list, target_label_list) = get_untargeted_adv_images(dataloader_test, model, attack, device)
@@ -158,4 +159,4 @@ if __name__ == "__main__":
     test_acc = test(list(zip(adv_image_list, target_label_list)), model, device)
     logging.info("Attack success rate: {:.2f}%".format(100 * test_acc))
 
-    save_only_successful_images(adv_image_list, target_label_list, settings.ADV_IMAGES_SAVE_PATH, model, device)
+    # save_only_successful_images(adv_image_list, target_label_list, settings.ADV_IMAGES_SAVE_PATH, model, device)
