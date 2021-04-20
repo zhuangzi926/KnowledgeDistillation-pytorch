@@ -2,6 +2,8 @@ import os
 import sys
 import datetime
 import logging
+from PIL import Image
+logging.getLogger("PIL").setLevel(logging.CRITICAL)
 
 import torch
 import torch.nn.functional as F
@@ -26,6 +28,11 @@ transform_test = transforms.Compose(
     ]
 )
 
+transform_raw = transforms.Compose(
+    [
+        transforms.ToTensor(),
+    ]
+)
 
 def get_zca_func(dataloader, device):
     data_list = []
@@ -39,7 +46,8 @@ def get_zca_func(dataloader, device):
 
 def config_paths():
     # Configure output path
-    root_dir = os.getcwd()
+    root_dir = os.path.dirname(os.path.abspath(__file__))
+
     cur_time = datetime.datetime.now().strftime("%Y-%m-%d-%H%M")
 
     # Log dir
@@ -52,7 +60,12 @@ def config_paths():
     if not os.path.exists(model_dir):
         os.mkdir(model_dir)
 
-    return root_dir, log_dir, model_dir, cur_time
+    # Data dir
+    data_dir = os.path.join(root_dir, "data")
+    if not os.path.exists(data_dir):
+        os.mkdir(data_dir)
+
+    return root_dir, log_dir, model_dir, data_dir, cur_time
 
 
 def config_logging(log_dir, cur_time):
@@ -82,20 +95,72 @@ def config_gpu():
     return device
 
 
-def get_dataloader():
-    if settings.DATASET_NAME == "cifar10":
+def get_dataloader(data_dir, dataset_name=settings.DATASET_NAME):
+    if dataset_name == "cifar10":
         dataset_train = datasets.CIFAR10(
-            "./data", train=True, download=True, transform=transform_train
+            data_dir, train=True, download=True, transform=transform_train
         )
         dataset_test = datasets.CIFAR10(
-            "./data", train=False, download=True, transform=transform_test
+            data_dir, train=False, download=True, transform=transform_test
+        )
+    elif dataset_name == "raw_cifar10":
+        dataset_train = datasets.CIFAR10(
+            data_dir, train=True, download=True, transform=transform_raw
+        )
+        dataset_test = datasets.CIFAR10(
+            data_dir, train=False, download=True, transform=transform_raw
+        )
+    elif dataset_name == "mnist":
+        dataset_train = datasets.MNIST(
+            data_dir, train=True, download=True, transform=transform_train
+        )
+        dataset_test = datasets.MNIST(
+            data_dir, train=False, download=True, transform=transform_test
+        )
+    elif dataset_name == "cifar100":
+        dataset_train = datasets.CIFAR100(
+            data_dir, train=True, download=True, transform=transform_train
+        )
+        dataset_test = datasets.CIFAR100(
+            data_dir, train=False, download=True, transform=transform_test
         )
     kwargs = {
         "batch_size": settings.BATCH_SIZE,
         "shuffle": True,
         "num_workers": 4,
-        "drop_last": True,
+        "drop_last": False,
     }
     dataloader_train = torch.utils.data.DataLoader(dataset_train, **kwargs)
     dataloader_test = torch.utils.data.DataLoader(dataset_test, **kwargs)
     return (dataloader_train, dataloader_test)
+
+
+def tensor_to_PIL(tensor):
+    """Convert (N, C, H, W)-size torch.Tensor into PIL image object."""
+    image = tensor.clone().cpu()
+    image = image.squeeze(0)
+    image = transforms.ToPILImage()(image)
+    return image
+
+
+def PIL_to_tensor(image):
+    """Convert PIL image object into (N, C, H, W)-size torch.Tensor."""
+    tensor = transforms.ToTensor()(image)
+    tensor = torch.unsqueeze(tensor, dim=0)
+    return tensor
+
+
+def get_PIL_from_dir(image_path):
+    if not os.path.exists(image_path) or not os.path.isdir(image_path):
+        raise FileNotFoundError("{} not found!".format(image_path))
+    filenames = [
+        os.path.join(image_path, f)
+        for f in os.listdir(image_path)
+        if os.path.isfile(os.path.join(image_path, f)) and f.endswith(".png")
+    ]
+    labels = [
+        int(f.split("/")[-1].strip(".png").split("_")[-1])
+        for f in filenames
+    ]
+    images = [Image.open(f).convert("RGB") for f in filenames]
+    return (images, labels)

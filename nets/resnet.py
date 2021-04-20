@@ -5,6 +5,11 @@
 import torch
 import torch.nn as nn
 import os
+import sys
+
+sys.path.append("..")
+import settings
+import utils
 
 __all__ = [
     "ResNet",
@@ -170,8 +175,9 @@ class ResNet(nn.Module):
         self.base_width = width_per_group
 
         ## CIFAR10: kernel_size 7 -> 3, stride 2 -> 1, padding 3->1
+        ## MNIST: input channel num 3 -> 1
         self.conv1 = nn.Conv2d(
-            3, self.inplanes, kernel_size=3, stride=1, padding=1, bias=False
+            settings.IMG_CHANNEL, self.inplanes, kernel_size=3, stride=1, padding=1, bias=False
         )
         ## END
 
@@ -196,6 +202,9 @@ class ResNet(nn.Module):
         self.layer4 = self._make_layer(
             block, 512, layers[3], stride=2, dilate=replace_stride_with_dilation[2]
         )
+
+        self.layer4.register_forward_hook(self.get_activation("layer4"))
+
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(512 * block.expansion, num_classes)
 
@@ -388,10 +397,12 @@ def resnext101_32x8d(pretrained=False, progress=True, device="cpu", **kwargs):
 
 
 if __name__ == "__main__":
-    import os
-    os.environ["CUDA_VISIBLE_DEVICES"] = "3"
-    device = torch.device("cuda")
-    model = resnet18().to(device)
+    device = utils.config_gpu()
+    model = resnet50().to(device)
     data = torch.arange(3*32*32, dtype=torch.float).view(1, 3, 32, 32).to(device)
+    # data = torch.arange(28*28*1, dtype=torch.float).view(1, 1, 28, 28).to(device)
     model(data)
+    print(model.activation["layer1"].shape)
+    print(model.activation["layer2"].shape)
     print(model.activation["layer3"].shape)
+    print(model.activation["layer4"].shape)

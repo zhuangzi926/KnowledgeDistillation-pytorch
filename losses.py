@@ -9,7 +9,7 @@ import settings
 
 
 def loss_hint(guided_layer_output, hint_layer_output, regressor):
-    """ Loss function of hint-layer-guided-layer knowledge distillation.
+    """Loss function of hint-layer-guided-layer knowledge distillation.
 
     loss_hint = 0.5 * reduce_mean(square(hint_layer_output - regressor(guided_layer_output)))
 
@@ -28,8 +28,14 @@ def loss_hint(guided_layer_output, hint_layer_output, regressor):
     return loss
 
 
-def loss_kd(student_logits, teacher_logits, target, temperature=settings.TEMPERATURE, alpha=settings.ALPHA):
-    """ Loss function of hinton-style Knowledge Distillation.
+def loss_kd(
+    student_logits,
+    teacher_logits,
+    target,
+    temperature=settings.TEMPERATURE,
+    alpha=settings.ALPHA,
+):
+    """Loss function of hinton-style Knowledge Distillation.
 
     loss_kd = factor * KLD(log_softmax(teacher(X) / temperature), softmax(student(X) / temperature))
 
@@ -56,4 +62,44 @@ def loss_kd(student_logits, teacher_logits, target, temperature=settings.TEMPERA
         * alpha
     )
     loss += F.cross_entropy(student_logits, target) * (1.0 - alpha)
+    return loss
+
+
+def l2_normalize(tensor):
+    """Return tensor / l2_norm(tensor)."""
+    l2_norm = torch.norm(tensor, p=2)
+    tensor /= l2_norm
+    return tensor
+
+
+def loss_attention(
+    student_attention_map_list, teacher_attention_map_list, beta=settings.BETA
+):
+    """Loss function of activation-based attention transfer with l2-norm.
+
+    loss_attention = (beta / 2) * [
+        l2_nrom(l2_normalize(student_attention_map[0]) - l2_normalize(teacher_attention_map[0]))
+        + l2_nrom(l2_normalize(student_attention_map[1]) - l2_normalize(teacher_attention_map[1]))
+        + ...
+        + l2_nrom(l2_normalize(student_attention_map[k]) - l2_normalize(teacher_attention_map[k]))
+    ]
+
+    , in which k = len(student_attention_map_list) - 1 = len(teacher_attention_map_list) - 1
+
+    Args:
+        student_attention_map_list(torch.Tensor): a tensor list with each element sized (N, H, W)
+        teacher_attention_map_list(torch.Tensor): a tensor list with each element sized (N, H, W)
+        beta(float): varies around 0.1
+
+    Returns:
+        loss(torch.Tensor): loss of attention transfer
+    """
+    assert len(student_attention_map_list) > 0
+    assert len(student_attention_map_list) == len(teacher_attention_map_list)
+
+    loss = 0.0
+    for s, t in zip(student_attention_map_list, teacher_attention_map_list):
+        loss += torch.norm(l2_normalize(s) - l2_normalize(t), p=2)
+    loss *= beta / 2
+
     return loss
