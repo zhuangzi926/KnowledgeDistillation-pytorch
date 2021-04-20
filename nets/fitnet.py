@@ -79,6 +79,7 @@ class FitNet1CIFAR(nn.Module):
         self.conv7_list = ListModule(self, "conv7_")
         self.conv8_list = ListModule(self, "conv8_")
         self.conv9_list = ListModule(self, "conv9_")
+
         # self.pool1 = nn.MaxPool2d(1, 1)
         # self.pool2 = nn.MaxPool2d(1, 1)
         self.pool1 = nn.MaxPool2d(2, 2)
@@ -88,6 +89,7 @@ class FitNet1CIFAR(nn.Module):
         # self.pool7 = nn.MaxPool2d(1, 1)
         # self.pool8 = nn.MaxPool2d(1, 1)
         self.pool3 = nn.MaxPool2d(8, 1)
+
         self.fc = nn.Linear(64, out_features=output_size)
 
         for _ in range(num_units):
@@ -102,6 +104,7 @@ class FitNet1CIFAR(nn.Module):
             self.conv9_list.append(nn.Conv2d(48, 64, 3, 1, padding=1))
 
         self.activation = {}
+
         self.pool2.register_forward_hook(self.get_activation("guided_layer"))
 
     def forward(self, x):
@@ -142,5 +145,6 @@ if __name__ == "__main__":
     # model = FitNet1CIFAR().to("cuda")
     data = torch.arange(28*28*1, dtype=torch.float).view(1, 1, 28, 28).to("cuda")
     # data = torch.arange(32 * 32 * 3, dtype=torch.float).view(1, 3, 32, 32).to("cuda")
+
     model(data)
     print(model.activation["guided_layer"].shape)

@@ -127,6 +127,7 @@ def train_kd(
     student.train()
 
     train_loss = 0.0
+
     alpha = -0.3 / (settings.NUM_EPOCHS - 1) * epoch_idx + 0.8
 
     for batch_idx, (data, target) in enumerate(dataloader):

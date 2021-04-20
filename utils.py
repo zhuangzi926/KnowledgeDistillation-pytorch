@@ -34,7 +34,6 @@ transform_raw = transforms.Compose(
     ]
 )
 
-
 def get_zca_func(dataloader, device):
     data_list = []
     for _, (data, target) in enumerate(dataloader):
@@ -48,6 +47,7 @@ def get_zca_func(dataloader, device):
 def config_paths():
     # Configure output path
     root_dir = os.path.dirname(os.path.abspath(__file__))
+
     cur_time = datetime.datetime.now().strftime("%Y-%m-%d-%H%M")
 
     # Log dir

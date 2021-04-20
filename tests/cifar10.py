@@ -47,6 +47,7 @@ def train(epoch_idx, dataloader, model, optimizer):
     model.train()
     for batch_idx, (data, target) in enumerate(dataloader):
         data, target = data.to(device), target.to(device)
+
         optimizer.zero_grad()
         output = model(data)
         loss = F.cross_entropy(output, target)
@@ -63,6 +64,7 @@ def test(dataloader, model):
     with torch.no_grad():
         for batch_idx, (data, target) in enumerate(dataloader):
             data, target = data.to(device), target.to(device)
+            
             output = model(data)
 
             # sum up batch loss
